@@ -18,6 +18,76 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package cli
 
-func run() int {
-	panic("not implemented")
+import (
+	"runtime"
+	"syscall"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"database/sql"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/naeimc/ciphect/internal/website"
+	"github.com/naeimc/ciphect/internal/website/logger"
+	"github.com/naeimc/ciphect/internal/website/web"
+	"github.com/naeimc/ciphect/internal/website/web/auth"
+	"github.com/naeimc/ciphect/logging"
+)
+
+func run() (code int) {
+
+	var (
+		address     = os.Getenv("CIPHECT_ADDRESS")
+		certificate = os.Getenv("CIPHECT_CERTIFICATE_FILE")
+		key         = os.Getenv("CIPHECT_KEY_FILE")
+		database    = os.Getenv("CIPHECT_DATABASE")
+		cookie      = os.Getenv("CIPHECT_COOKIE")
+	)
+
+	logger.Logger = logging.New(logging.Information, runtime.NumCPU(), logging.String{Writer: os.Stderr})
+	defer logger.Logger.Close()
+
+	db, err := sql.Open("pgx", database)
+	if err != nil {
+		logger.Print(logging.Fatal, err)
+		code = 1
+		return
+	}
+
+	handler := http.NewServeMux()
+	handler.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {})
+
+	web.HandleFunction(handler, "/", website.Index)
+	web.HandleFunction(handler, "/x/", website.X)
+	web.HandleFunction(handler, "POST /key/create/", website.KeyCreate)
+	web.HandleFunction(handler, "POST /key/delete/", website.KeyDelete)
+	web.HandleFunction(handler, "/sign-up/", website.SignUp)
+	web.HandleFunction(handler, "/sign-in/", website.SignIn)
+	web.HandleFunction(handler, "/sign-out/", website.SignOut)
+
+	server := &web.Server{
+		Address:     address,
+		Handler:     handler,
+		Certificate: certificate,
+		Key:         key,
+
+		StopSignals: []os.Signal{os.Interrupt, syscall.SIGTERM},
+		StopTimeout: time.Second * 10,
+
+		OnShutdown: []func(){func() { website.Exchange.Stop(website.ErrExchangeStopped) }},
+	}
+
+	auth.DB = db
+	auth.CookieName = cookie
+	auth.CookieSecure = server.UseTLS()
+
+	if err := server.ListenAndServe(); err != nil {
+		code = 1
+	}
+
+	website.Group.Wait()
+
+	return
 }

@@ -1,0 +1,26 @@
+{{ define "main" }}
+<main class="w-full max-w-lg m-3.5">
+    <form method="post" class="flex flex-col gap-3">
+
+        <div>
+            <label id="usernameLabel" class="hidden" for="usernameInput">Username</label>
+            <input id="usernameInput" class="w-full bg-slate-950 px-3.5 py-2.5 rounded" name="username" type="text" placeholder="Username">
+        </div>
+
+        <div>
+            <label id="password0Label" class="hidden" for="password0Input">Password</label>
+            <input id="password0Input" class="w-full bg-slate-950 px-3.5 py-2.5 rounded" name="password1" type="password" placeholder="Password">
+        </div>
+
+        <div>
+            <label id="password1Label" class="hidden" for="password1Input">Re-Enter Password</label>
+            <input id="password1Input" class="w-full bg-slate-950 px-3.5 py-2.5 rounded" name="password2" type="password" placeholder="Re-Enter Password">
+        </div>
+
+        <div>
+            <button class="w-full px-3.5 py-2.5 rounded font-semibold bg-amber-600 hover:bg-amber-500" type="submit">Sign Up</button>
+        </div>
+
+    </form>
+</main>
+{{ end }}
